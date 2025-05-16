@@ -2,7 +2,7 @@
 import React from 'react';
 import { Product } from '@/types/product';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Edit, Trash } from 'lucide-react';
+import { ShoppingCart, Edit, Trash, Package } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ProductCardProps {

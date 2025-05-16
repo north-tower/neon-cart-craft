@@ -2,6 +2,7 @@
 import React from 'react';
 import { Product } from '@/types/product';
 import ProductCard from './ProductCard';
+import { Package } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 interface ProductGridProps {
