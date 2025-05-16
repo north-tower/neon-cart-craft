@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Product } from '@/types/product';
 import ProductGrid from './ProductGrid';
 import AddProductModal from './AddProductModal';
@@ -7,60 +7,121 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Plus, Search, Package } from 'lucide-react';
 import { toast } from 'sonner';
-
-// Mock products for demo purposes
-const MOCK_PRODUCTS: Product[] = [
-  {
-    id: '1',
-    name: 'Wireless Headphones',
-    description: 'High-quality wireless headphones with noise cancellation',
-    price: 129.99,
-    category: 'Electronics',
-    sku: 'WH-001',
-    stock: 15,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: '2',
-    name: 'Smart Watch',
-    description: 'Track your fitness and stay connected with this smart watch',
-    price: 199.99,
-    category: 'Electronics',
-    sku: 'SW-002',
-    stock: 8,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: '3',
-    name: 'Bluetooth Speaker',
-    description: 'Portable speaker with excellent sound quality',
-    price: 79.99,
-    category: 'Electronics',
-    sku: 'BS-003',
-    stock: 22,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-  {
-    id: '4',
-    name: 'Organic Cotton T-Shirt',
-    description: 'Comfortable, eco-friendly t-shirt made from organic cotton',
-    price: 24.99,
-    category: 'Apparel',
-    sku: 'AP-001',
-    stock: 50,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-  },
-];
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const ProductCatalog: React.FC = () => {
-  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  const queryClient = useQueryClient();
+
+  // Fetch products from Supabase
+  const { data: products = [], isLoading, error } = useQuery({
+    queryKey: ['products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*');
+      
+      if (error) {
+        toast.error('Failed to load products');
+        throw error;
+      }
+      
+      // Convert the database format to our Product type
+      return data.map((item) => ({
+        id: String(item.id),
+        name: item.product_name,
+        description: item.description || '',
+        price: Number(item.price),
+        category: item.category || '',
+        sku: item.sku,
+        stock: item.stock_quantity || 0,
+        image: item.photo_url,
+        createdAt: new Date(item.created_at),
+        updatedAt: new Date(item.updated_at)
+      }));
+    }
+  });
+
+  // Add product mutation
+  const addProductMutation = useMutation({
+    mutationFn: async (productData: Partial<Product>) => {
+      const { data, error } = await supabase
+        .from('products')
+        .insert([{
+          product_name: productData.name,
+          description: productData.description,
+          price: productData.price,
+          category: productData.category,
+          sku: productData.sku,
+          stock_quantity: productData.stock,
+          photo_url: productData.image
+        }])
+        .select();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Product added successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to add product: ${error.message}`);
+    }
+  });
+
+  // Update product mutation
+  const updateProductMutation = useMutation({
+    mutationFn: async (productData: Partial<Product>) => {
+      const { data, error } = await supabase
+        .from('products')
+        .update({
+          product_name: productData.name,
+          description: productData.description,
+          price: productData.price,
+          category: productData.category,
+          sku: productData.sku,
+          stock_quantity: productData.stock,
+          photo_url: productData.image,
+          updated_at: new Date()
+        })
+        .eq('id', productData.id)
+        .select();
+      
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Product updated successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to update product: ${error.message}`);
+    }
+  });
+
+  // Delete product mutation
+  const deleteProductMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('products')
+        .delete()
+        .eq('id', id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+      toast.success('Product deleted successfully');
+    },
+    onError: (error) => {
+      toast.error(`Failed to delete product: ${error.message}`);
+    }
+  });
 
   const handleAddProduct = () => {
     setEditingProduct(null);
@@ -73,32 +134,19 @@ const ProductCatalog: React.FC = () => {
   };
 
   const handleDeleteProduct = (id: string) => {
-    // Normally we'd call an API here
-    setProducts(products.filter((p) => p.id !== id));
-    toast.success('Product deleted successfully');
+    deleteProductMutation.mutate(id);
   };
 
   const handleSaveProduct = (productData: Partial<Product>) => {
     if (editingProduct) {
       // Update existing product
-      setProducts(
-        products.map((p) =>
-          p.id === editingProduct.id
-            ? { ...p, ...productData, updatedAt: new Date() }
-            : p
-        )
-      );
-      toast.success('Product updated successfully');
+      updateProductMutation.mutate({ 
+        ...productData, 
+        id: editingProduct.id 
+      });
     } else {
       // Add new product
-      const newProduct: Product = {
-        id: `${Date.now()}`, // In real app, this would be generated by the backend
-        ...productData as Omit<Product, 'id' | 'createdAt' | 'updatedAt'>,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-      setProducts([...products, newProduct]);
-      toast.success('Product added successfully');
+      addProductMutation.mutate(productData);
     }
   };
 
@@ -106,7 +154,7 @@ const ProductCatalog: React.FC = () => {
     (product) =>
       product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchQuery.toLowerCase())
+      (product.category && product.category.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   return (
@@ -135,11 +183,21 @@ const ProductCatalog: React.FC = () => {
         />
       </div>
 
-      <ProductGrid
-        products={filteredProducts}
-        onDelete={handleDeleteProduct}
-        onEdit={handleEditProduct}
-      />
+      {isLoading ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-pos-primary"></div>
+        </div>
+      ) : error ? (
+        <div className="text-center py-12 text-red-500">
+          Error loading products. Please try again.
+        </div>
+      ) : (
+        <ProductGrid
+          products={filteredProducts}
+          onDelete={handleDeleteProduct}
+          onEdit={handleEditProduct}
+        />
+      )}
 
       <AddProductModal
         isOpen={isModalOpen}

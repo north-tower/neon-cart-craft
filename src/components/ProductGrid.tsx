@@ -12,7 +12,7 @@ interface ProductGridProps {
 }
 
 const ProductGrid: React.FC<ProductGridProps> = ({ products, onDelete, onEdit }) => {
-  if (products.length === 0) {
+  if (!products || products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-12">
         <Package className="h-16 w-16 text-gray-300 mb-4" />
@@ -23,7 +23,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({ products, onDelete, onEdit })
   }
 
   return (
-    <div className="pos-grid">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
       {products.map((product) => (
         <ProductCard
           key={product.id}
