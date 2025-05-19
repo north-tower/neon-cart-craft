@@ -854,6 +854,58 @@ export type Database = {
         }
         Relationships: []
       }
+      production_batches: {
+        Row: {
+          id: number
+          finished_product_id: number
+          quantity_produced: number
+          status: 'in_progress' | 'completed' | 'failed'
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          finished_product_id: number
+          quantity_produced: number
+          status: 'in_progress' | 'completed' | 'failed'
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          finished_product_id?: number
+          quantity_produced?: number
+          status?: 'in_progress' | 'completed' | 'failed'
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      production_batch_components: {
+        Row: {
+          id: number
+          batch_id: number
+          component_id: number
+          quantity_used: number
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          batch_id: number
+          component_id: number
+          quantity_used: number
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          batch_id?: number
+          component_id?: number
+          quantity_used?: number
+          created_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never
