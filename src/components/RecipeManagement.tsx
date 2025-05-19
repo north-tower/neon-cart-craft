@@ -80,7 +80,9 @@ const RecipeManagement: React.FC = () => {
         createdAt: new Date(item.created_at),
         updatedAt: new Date(item.updated_at)
       }));
-    }
+    },
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   // Fetch recipes for selected product
@@ -126,7 +128,9 @@ const RecipeManagement: React.FC = () => {
         }
       }));
     },
-    enabled: !!selectedProduct
+    enabled: !!selectedProduct,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   // Add recipe mutation

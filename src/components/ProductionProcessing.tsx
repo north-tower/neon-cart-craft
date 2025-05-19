@@ -64,7 +64,9 @@ const ProductionProcessing: React.FC = () => {
       
       if (error) throw error;
       return data;
-    }
+    },
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   // Fetch production batches
@@ -127,7 +129,9 @@ const ProductionProcessing: React.FC = () => {
           }
         };
       }) as ProductionBatch[];
-    }
+    },
+    refetchOnMount: true,
+    refetchOnWindowFocus: true
   });
 
   // Fetch recipes for selected product
